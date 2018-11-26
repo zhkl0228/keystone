@@ -8,33 +8,24 @@
 package keystone;
 
 import com.sun.jna.ptr.LongByReference;
+import junit.framework.TestCase;
 import keystone.exceptions.AssembleFailedKeystoneException;
 import keystone.exceptions.OpenFailedKeystoneException;
 import keystone.exceptions.SetOptionFailedKeystoneException;
 import keystone.utilities.Version;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-class KeystoneTest {
+public class KeystoneTest extends TestCase {
 
     private Keystone keystone;
 
-    @BeforeEach
-    void setUp() {
+    protected void setUp() {
         keystone = new Keystone(KeystoneArchitecture.X86, KeystoneMode.Mode64);
     }
 
-    @AfterEach
-    void tearDown() {
-    }
-
-    @Test
-    void ctor_ifInvalidArguments_shouldThrowAnException() {
+    public void test_ctor_ifInvalidArguments_shouldThrowAnException() {
         try {
             new Keystone(KeystoneArchitecture.Ppc, KeystoneMode.SparcV9);
             fail("An exception must be thrown upon invalid arguments are used.");
@@ -43,42 +34,39 @@ class KeystoneTest {
         }
     }
 
-    @Test
-    void assemble_shouldAssembleIncDec() {
+    public void test_assemble_shouldAssembleIncDec() {
         // Arrange
-        var assembly = "INC EAX;DEC EAX";
-        var expectedMachineCode = new byte[]{(byte) 0xFF, (byte) 0xC0, (byte) 0xFF, (byte) 0xC8};
-        var expectedNumberOfStatements = 2;
+        String assembly = "INC EAX;DEC EAX";
+        byte[] expectedMachineCode = new byte[]{(byte) 0xFF, (byte) 0xC0, (byte) 0xFF, (byte) 0xC8};
+        int expectedNumberOfStatements = 2;
 
         // Act
-        var encoded = keystone.assemble(assembly);
+        KeystoneEncoded encoded = keystone.assemble(assembly);
 
         // Assert
-        assertArrayEquals(expectedMachineCode, encoded.getMachineCode());
+        assertTrue(Arrays.equals(expectedMachineCode, encoded.getMachineCode()));
         assertEquals(expectedNumberOfStatements, encoded.getNumberOfStatements());
     }
 
-    @Test
-    void assemble_withAddress_shouldAssembleDoubleNop() {
+    public void test_assemble_withAddress_shouldAssembleDoubleNop() {
         // Arrange
-        var assembly = "NOP;NOP";
-        var expectedMachineCode = new byte[]{(byte) 0x90, (byte) 0x90};
-        var expectedNumberOfStatements = 2;
-        var expectedAddress = 0x200;
+        String assembly = "NOP;NOP";
+        byte[] expectedMachineCode = new byte[]{(byte) 0x90, (byte) 0x90};
+        int expectedNumberOfStatements = 2;
+        int expectedAddress = 0x200;
 
         // Act
-        var encoded = keystone.assemble(assembly, expectedAddress);
+        KeystoneEncoded encoded = keystone.assemble(assembly, expectedAddress);
 
         // Assert
-        assertArrayEquals(expectedMachineCode, encoded.getMachineCode());
+        assertTrue(Arrays.equals(expectedMachineCode, encoded.getMachineCode()));
         assertEquals(expectedNumberOfStatements, encoded.getNumberOfStatements());
         assertEquals(expectedAddress, encoded.getAddress());
     }
 
-    @Test
-    void assemble_ifAssemblyCodeInvalid_shouldThrowAnException() {
+    public void test_assemble_ifAssemblyCodeInvalid_shouldThrowAnException() {
         // Arrange
-        var assembly = "UNK";
+        String assembly = "UNK";
 
         // Act and Assert
         try {
@@ -90,27 +78,25 @@ class KeystoneTest {
         }
     }
 
-    @Test
-    void assemble_withCollectionAndAddress_shouldAssembleIncDec() {
+    public void test_assemble_withCollectionAndAddress_shouldAssembleIncDec() {
         // Arrange
-        var assembly = new LinkedList<String>();
-        var expectedMachineCode = new byte[]{(byte) 0xFF, (byte) 0xC0, (byte) 0xFF, (byte) 0xC8};
-        var expectedNumberOfStatements = 2;
+        LinkedList<String> assembly = new LinkedList<>();
+        byte[] expectedMachineCode = new byte[]{(byte) 0xFF, (byte) 0xC0, (byte) 0xFF, (byte) 0xC8};
+        int expectedNumberOfStatements = 2;
 
         // Act
         assembly.add("INC EAX");
         assembly.add("DEC EAX");
-        var encoded = keystone.assemble(assembly);
+        KeystoneEncoded encoded = keystone.assemble(assembly);
 
         // Assert
-        assertArrayEquals(expectedMachineCode, encoded.getMachineCode());
+        assertTrue(Arrays.equals(expectedMachineCode, encoded.getMachineCode()));
         assertEquals(expectedNumberOfStatements, encoded.getNumberOfStatements());
     }
 
-    @Test
-    void assemble_withSymbolWithoutResolver_shouldFail() {
+    public void test_assemble_withSymbolWithoutResolver_shouldFail() {
         // Arrange
-        var assembly = "MOV EAX, TEST";
+        String assembly = "MOV EAX, TEST";
 
         // Act and Assert
         try {
@@ -121,22 +107,20 @@ class KeystoneTest {
         }
     }
 
-    @Test
-    void setAssemblySyntax_withAttSyntax_shouldBeEqualToX86Syntax() {
+    public void test_setAssemblySyntax_withAttSyntax_shouldBeEqualToX86Syntax() {
         // Act
-        var x86Result = keystone.assemble("INC ECX; DEC EDX");
+        KeystoneEncoded x86Result = keystone.assemble("INC ECX; DEC EDX");
         keystone.setAssemblySyntax(KeystoneOptionValue.KeystoneOptionSyntax.Att);
-        var attResult = keystone.assemble("INC %ecx; DEC %edx");
+        KeystoneEncoded attResult = keystone.assemble("INC %ecx; DEC %edx");
 
         // Assert
-        assertArrayEquals(x86Result.getMachineCode(), attResult.getMachineCode());
+        assertTrue(Arrays.equals(x86Result.getMachineCode(), attResult.getMachineCode()));
     }
 
-    @Test
-    void setOption_ifInvalidArguments_shouldTrowAnException() {
+    public void test_setOption_ifInvalidArguments_shouldTrowAnException() {
         // Arrange
-        var expectedType = KeystoneOptionType.Syntax;
-        var invalidValue = -1;
+        KeystoneOptionType expectedType = KeystoneOptionType.Syntax;
+        int invalidValue = -1;
 
         // Act and Assert
         try {
@@ -148,14 +132,13 @@ class KeystoneTest {
         }
     }
 
-    @Test
-    void setSymbolResolver_assembleCustomSymbol_shouldProduceValidAssemblyCode() {
+    public void test_setSymbolResolver_assembleCustomSymbol_shouldProduceValidAssemblyCode() {
         // Arrange
-        var expectedSymbol = "TEST";
-        var expectedValue = (byte) 0x66;
-        var movOpcode = (byte) 0xB8;
-        var assembly = "MOV EAX, " + expectedSymbol;
-        var symbolResolver = new SymbolResolverCallback() {
+        final String expectedSymbol = "TEST";
+        final byte expectedValue = (byte) 0x66;
+        byte movOpcode = (byte) 0xB8;
+        String assembly = "MOV EAX, " + expectedSymbol;
+        SymbolResolverCallback symbolResolver = new SymbolResolverCallback() {
             @Override
             public boolean onResolve(String symbol, LongByReference value) {
                 assertEquals(expectedSymbol, symbol);
@@ -167,7 +150,7 @@ class KeystoneTest {
 
         // Act
         keystone.setSymbolResolver(symbolResolver);
-        var assemblyCode = keystone.assemble(assembly);
+        KeystoneEncoded assemblyCode = keystone.assemble(assembly);
 
         // Assert
         assertEquals(1, assemblyCode.getNumberOfStatements());
@@ -175,13 +158,12 @@ class KeystoneTest {
         assertEquals(expectedValue, assemblyCode.getMachineCode()[1]);
     }
 
-    @Test
-    void unsetSymbolResolver_assembleCustomSymbol_shouldfailBecauseTheCallbackHasBeenUnset() {
+    public void test_unsetSymbolResolver_assembleCustomSymbol_shouldfailBecauseTheCallbackHasBeenUnset() {
         // Arrange
-        var expectedSymbol = "TEST";
-        var expectedValue = (byte) 0x66;
-        var assembly = "MOV EAX, " + expectedSymbol;
-        var symbolResolver = new SymbolResolverCallback() {
+        final String expectedSymbol = "TEST";
+        final byte expectedValue = (byte) 0x66;
+        String assembly = "MOV EAX, " + expectedSymbol;
+        SymbolResolverCallback symbolResolver = new SymbolResolverCallback() {
             @Override
             public boolean onResolve(String symbol, LongByReference value) {
                 assertEquals(expectedSymbol, symbol);
@@ -203,18 +185,15 @@ class KeystoneTest {
         }
     }
 
-    @Test
-    void isArchitectureSupported_shouldSupportX86Everywhere() {
+    public void test_isArchitectureSupported_shouldSupportX86Everywhere() {
         assertTrue(Keystone.isArchitectureSupported(KeystoneArchitecture.X86));
     }
 
-    @Test
-    void version_shouldBeDifferentFromZero() {
+    public void test_version_shouldBeDifferentFromZero() {
         assertEquals(1, keystone.version().compareTo(new Version(0, 0)));
     }
 
-    @Test
-    void close_shouldNotThrowAnyException() {
+    public void test_close_shouldNotThrowAnyException() {
         keystone.close();
     }
 }

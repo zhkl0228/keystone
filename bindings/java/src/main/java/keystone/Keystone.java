@@ -13,12 +13,8 @@ import com.sun.jna.ptr.PointerByReference;
 import keystone.exceptions.AssembleFailedKeystoneException;
 import keystone.exceptions.OpenFailedKeystoneException;
 import keystone.exceptions.SetOptionFailedKeystoneException;
-import keystone.natives.CleanerContainer;
 import keystone.natives.DirectMappingKeystoneNative;
-import keystone.natives.KeystoneCleanerContainer;
 import keystone.utilities.Version;
-
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * The Keystone engine.
@@ -29,23 +25,6 @@ public class Keystone implements AutoCloseable {
      * The pointer to the Keystone native resource.
      */
     private final Pointer ksEngine;
-
-    /**
-     * The cleaner container that frees up the native resource if this object is not properly closed and is
-     * candidate for garbage collection.
-     */
-    private final CleanerContainer ksEngineCleaner;
-
-    /**
-     * Indicates whether the current instance of Keystone has been closed.
-     */
-    private final AtomicBoolean hasBeenClosed;
-
-    /**
-     * The memory retention of the symbol resolver callback, in order to prevent the garbage collector
-     * to free up the callback, that would result in a crash, as the native library still has a reference to it.
-     */
-    private SymbolResolverCallback symbolResolverCallback;
 
     /**
      * Initializes a new instance of the class {@link Keystone}.
@@ -59,8 +38,6 @@ public class Keystone implements AutoCloseable {
      */
     public Keystone(KeystoneArchitecture architecture, KeystoneMode mode) {
         ksEngine = initializeKeystoneEngine(architecture, mode);
-        ksEngineCleaner = initializeKeystoneCleanerContainer();
-        hasBeenClosed = new AtomicBoolean(false);
     }
 
     /**
@@ -82,24 +59,14 @@ public class Keystone implements AutoCloseable {
      * @throws OpenFailedKeystoneException if the Keystone library cannot be opened properly.
      */
     private Pointer initializeKeystoneEngine(KeystoneArchitecture architecture, KeystoneMode mode) {
-        var pointerToEngine = new PointerByReference();
-        var openResult = DirectMappingKeystoneNative.ks_open(architecture, mode, pointerToEngine);
+        PointerByReference pointerToEngine = new PointerByReference();
+        KeystoneError openResult = DirectMappingKeystoneNative.ks_open(architecture, mode, pointerToEngine);
 
         if (openResult != KeystoneError.Ok) {
             throw new OpenFailedKeystoneException(openResult);
         }
 
         return pointerToEngine.getValue();
-    }
-
-    /**
-     * Initializes the cleaner object, that is going to close the native handle of Keystone if
-     * the instance is garbage collected.
-     *
-     * @return The return value is a cleaner container.
-     */
-    private CleanerContainer initializeKeystoneCleanerContainer() {
-        return new KeystoneCleanerContainer(ksEngine);
     }
 
     /**
@@ -122,20 +89,20 @@ public class Keystone implements AutoCloseable {
      * @throws AssembleFailedKeystoneException if the assembly code cannot be assembled properly.
      */
     public KeystoneEncoded assemble(String assembly, int address) {
-        var pointerToMachineCodeBuffer = new PointerByReference();
-        var pointerToMachineCodeSize = new IntByReference();
-        var pointerToNumberOfStatements = new IntByReference();
+        PointerByReference pointerToMachineCodeBuffer = new PointerByReference();
+        IntByReference pointerToMachineCodeSize = new IntByReference();
+        IntByReference pointerToNumberOfStatements = new IntByReference();
 
-        var result = DirectMappingKeystoneNative.ks_asm(ksEngine, assembly, address, pointerToMachineCodeBuffer,
+        int result = DirectMappingKeystoneNative.ks_asm(ksEngine, assembly, address, pointerToMachineCodeBuffer,
                 pointerToMachineCodeSize, pointerToNumberOfStatements);
 
         if (result != 0) {
-            var errorCode = DirectMappingKeystoneNative.ks_errno(ksEngine);
+            KeystoneError errorCode = DirectMappingKeystoneNative.ks_errno(ksEngine);
             throw new AssembleFailedKeystoneException(errorCode, assembly);
         }
 
-        var machineCodeBuffer = pointerToMachineCodeBuffer.getValue();
-        var machineCode = machineCodeBuffer.getByteArray(0, pointerToMachineCodeSize.getValue());
+        Pointer machineCodeBuffer = pointerToMachineCodeBuffer.getValue();
+        byte[] machineCode = machineCodeBuffer.getByteArray(0, pointerToMachineCodeSize.getValue());
 
         DirectMappingKeystoneNative.ks_free(machineCodeBuffer);
 
@@ -162,7 +129,15 @@ public class Keystone implements AutoCloseable {
      * @throws AssembleFailedKeystoneException if the assembly code cannot be assembled properly.
      */
     public KeystoneEncoded assemble(Iterable<String> assembly, int address) {
-        return assemble(String.join(";", assembly), address);
+        StringBuilder builder = new StringBuilder();
+        for (String asm : assembly) {
+            builder.append(asm).append(';');
+        }
+        int length = builder.length();
+        if (length > 0) {
+            builder.deleteCharAt(length - 1);
+        }
+        return assemble(builder.toString(), address);
     }
 
     /**
@@ -171,8 +146,8 @@ public class Keystone implements AutoCloseable {
      * @return The returned value is an instance of the class {@link Version}, containing the major and minor version numbers.
      */
     public Version version() {
-        var major = new IntByReference();
-        var minor = new IntByReference();
+        IntByReference major = new IntByReference();
+        IntByReference minor = new IntByReference();
 
         DirectMappingKeystoneNative.ks_version(major, minor);
 
@@ -201,7 +176,7 @@ public class Keystone implements AutoCloseable {
      * @throws SetOptionFailedKeystoneException if the pair of type and value is not valid.
      */
     public void setOption(KeystoneOptionType type, int value) {
-        var result = DirectMappingKeystoneNative.ks_option(ksEngine, type, value);
+        KeystoneError result = DirectMappingKeystoneNative.ks_option(ksEngine, type, value);
 
         if (result != KeystoneError.Ok) {
             throw new SetOptionFailedKeystoneException(result, type, value);
@@ -217,7 +192,6 @@ public class Keystone implements AutoCloseable {
      * @throws SetOptionFailedKeystoneException if the pair of type and value is not valid.
      */
     public void setSymbolResolver(SymbolResolverCallback callback) {
-        symbolResolverCallback = callback;
         DirectMappingKeystoneNative.ks_option(ksEngine, KeystoneOptionType.SymbolResolver, callback);
     }
 
@@ -228,7 +202,6 @@ public class Keystone implements AutoCloseable {
      */
     public void unsetSymbolResolver() {
         DirectMappingKeystoneNative.ks_option(ksEngine, KeystoneOptionType.SymbolResolver, 0);
-        symbolResolverCallback = null;
     }
 
     /**
@@ -240,10 +213,6 @@ public class Keystone implements AutoCloseable {
      */
     @Override
     public void close() {
-        var hasBeenAlreadyClosed = hasBeenClosed.getAndSet(true);
-
-        if (!hasBeenAlreadyClosed) {
-            ksEngineCleaner.close();
-        }
+        DirectMappingKeystoneNative.ks_close(ksEngine);
     }
 }

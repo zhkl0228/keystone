@@ -7,63 +7,57 @@
 
 package keystone.utilities;
 
-import org.junit.jupiter.api.Test;
+import junit.framework.TestCase;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-class VersionTest {
+public class VersionTest extends TestCase {
 
     private final int major = 3;
     private final int minor = 1;
 
-    @Test
-    void major_shouldReturnTheValueSpecifiedInTheConstructor() {
+    public void test_major_shouldReturnTheValueSpecifiedInTheConstructor() {
         // Arrange
-        var v = new Version(major, minor);
+        Version v = new Version(major, minor);
 
         // Act
-        var m = v.major();
+        int m = v.major();
 
         // Assert
         assertEquals(major, m);
     }
 
-    @Test
-    void minor_shouldReturnTheValueSpecifiedInTheConstructor() {
+    public void test_minor_shouldReturnTheValueSpecifiedInTheConstructor() {
         // Arrange
-        var v = new Version(major, minor);
+        Version v = new Version(major, minor);
 
         // Act
-        var m = v.minor();
+        int m = v.minor();
 
         // Assert
         assertEquals(minor, m);
     }
 
-    @Test
-    void compareTo_ifMajorIsNotEqual_shouldReturnDifferent() {
+    public void test_compareTo_ifMajorIsNotEqual_shouldReturnDifferent() {
         // Arrange
-        var v1 = new Version(major, minor);
-        var v2 = new Version(major + 1, minor);
+        Version v1 = new Version(major, minor);
+        Version v2 = new Version(major + 1, minor);
 
         // Act
-        var lower = v1.compareTo(v2);
-        var higher = v2.compareTo(v1);
+        int lower = v1.compareTo(v2);
+        int higher = v2.compareTo(v1);
 
         // Assert
         assertEquals(-1, lower);
         assertEquals(1, higher);
     }
 
-    @Test
-    void compareTo_ifMinorIsNotEqual_shouldReturnDifferent() {
+    public void test_compareTo_ifMinorIsNotEqual_shouldReturnDifferent() {
         // Arrange
-        var v1 = new Version(major, minor + 1);
-        var v2 = new Version(major, minor);
+        Version v1 = new Version(major, minor + 1);
+        Version v2 = new Version(major, minor);
 
         // Act
-        var lower = v2.compareTo(v1);
-        var higher = v1.compareTo(v2);
+        int lower = v2.compareTo(v1);
+        int higher = v1.compareTo(v2);
 
         // Assert
         assertEquals(-1, lower);

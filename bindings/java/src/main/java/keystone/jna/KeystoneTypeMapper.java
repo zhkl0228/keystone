@@ -14,10 +14,35 @@ import keystone.*;
  */
 public class KeystoneTypeMapper extends EnumTypeMapper {
     public KeystoneTypeMapper() {
-        addTypeConverter(KeystoneError.class, KeystoneError::fromValue);
-        addTypeConverter(KeystoneArchitecture.class, KeystoneArchitecture::fromValue);
-        addTypeConverter(KeystoneMode.class, KeystoneMode::fromValue);
-        addTypeConverter(KeystoneOptionType.class, KeystoneOptionType::fromValue);
-        addTypeConverter(KeystoneOptionValue.KeystoneOptionSyntax.class, KeystoneOptionValue.KeystoneOptionSyntax::fromValue);
+        addTypeConverter(KeystoneError.class, new Function() {
+            @Override
+            public Object apply(int nativeValue) {
+                return KeystoneError.fromValue(nativeValue);
+            }
+        });
+        addTypeConverter(KeystoneArchitecture.class, new Function() {
+            @Override
+            public Object apply(int nativeValue) {
+                return KeystoneArchitecture.fromValue(nativeValue);
+            }
+        });
+        addTypeConverter(KeystoneMode.class, new Function() {
+            @Override
+            public Object apply(int nativeValue) {
+                return KeystoneMode.fromValue(nativeValue);
+            }
+        });
+        addTypeConverter(KeystoneOptionType.class, new Function() {
+            @Override
+            public Object apply(int nativeValue) {
+                return KeystoneOptionType.fromValue(nativeValue);
+            }
+        });
+        addTypeConverter(KeystoneOptionValue.KeystoneOptionSyntax.class, new Function() {
+            @Override
+            public Object apply(int nativeValue) {
+                return KeystoneOptionValue.KeystoneOptionSyntax.fromValue(nativeValue);
+            }
+        });
     }
 }

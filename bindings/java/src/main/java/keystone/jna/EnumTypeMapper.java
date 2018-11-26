@@ -12,8 +12,6 @@ import com.sun.jna.FromNativeContext;
 import com.sun.jna.ToNativeContext;
 import com.sun.jna.TypeConverter;
 
-import java.util.function.Function;
-
 /**
  * Extends the default type mapper of JNA in order to provide custom bindings for enumerations.
  */
@@ -26,7 +24,7 @@ class EnumTypeMapper extends DefaultTypeMapper {
      * @param fromNativeInteger A function that converts the native enumeration into the Java enumeration.
      * @param <T>               The type of the Java enumeration.
      */
-    <T extends JnaEnum> void addTypeConverter(Class<T> enumerationType, Function<Integer, T> fromNativeInteger) {
+    <T extends JnaEnum> void addTypeConverter(Class<T> enumerationType, final Function fromNativeInteger) {
         addTypeConverter(enumerationType, new TypeConverter() {
 
             /**
