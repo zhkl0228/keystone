@@ -187,6 +187,7 @@ public class KeystoneTest extends TestCase {
 
     public void test_isArchitectureSupported_shouldSupportX86Everywhere() {
         assertTrue(Keystone.isArchitectureSupported(KeystoneArchitecture.X86));
+        assertTrue(Keystone.isArchitectureSupported(KeystoneArchitecture.Arm64));
     }
 
     public void test_version_shouldBeDifferentFromZero() {
