@@ -581,6 +581,10 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
 AsmParser::~AsmParser() {
   assert((HadError || ActiveMacros.empty()) &&
          "Unexpected active macro instantiation!");
+    
+  // Restore the saved diagnostics handler and context for use during
+  // finalization
+  SrcMgr.setDiagHandler(SavedDiagHandler, SavedDiagContext);  
 }
 
 void AsmParser::printMacroInstantiations() {
@@ -711,9 +715,10 @@ size_t AsmParser::Run(bool NoInitialTextSection, uint64_t Address, bool NoFinali
     }
 
     //printf(">> 222 error = %u\n", Info.KsError);
-    if (!KsError)
+    if (!KsError) {
         KsError = Info.KsError;
         return 0;
+    }
 
     // We had an error, validate that one was emitted and recover by skipping to
     // the next line.

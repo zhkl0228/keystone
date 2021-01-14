@@ -16,11 +16,19 @@ extern "C" {
 #ifdef _MSC_VER     // MSVC compiler
 #pragma warning(disable:4201)
 #pragma warning(disable:4100)
+#ifndef KEYSTONE_STATIC
 #define KEYSTONE_EXPORT __declspec(dllexport)
+#else
+#define KEYSTONE_EXPORT
+#endif
 #else
 #ifdef __GNUC__
 #include <stdbool.h>
+#ifndef KEYSTONE_STATIC
 #define KEYSTONE_EXPORT __attribute__((visibility("default")))
+#else
+#define KEYSTONE_EXPORT
+#endif
 #else
 #define KEYSTONE_EXPORT
 #endif
@@ -37,7 +45,7 @@ typedef struct ks_struct ks_engine;
 // Package version
 #define KS_VERSION_MAJOR KS_API_MAJOR
 #define KS_VERSION_MINOR KS_API_MINOR
-#define KS_VERSION_EXTRA 1
+#define KS_VERSION_EXTRA 2
 
 /*
   Macro to create combined version which can be compared to

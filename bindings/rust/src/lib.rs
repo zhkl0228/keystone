@@ -1,6 +1,6 @@
-//! Keystone Assembler Engine (www.keystone-engine.org) */
-//! By Nguyen Anh Quynh <aquynh@gmail.com>, 2016 */
-//! Rust bindings by Remco Verhoef <remco@dutchcoders.io>, 2016 */
+//! Keystone Assembler Engine (www.keystone-engine.org) \
+//! By Nguyen Anh Quynh <aquynh@gmail.com>, 2016 \
+//! Rust bindings by Remco Verhoef <remco@dutchcoders.io>, 2016
 //!
 //! ```rust
 //! extern crate keystone;
@@ -16,13 +16,15 @@
 //! }
 //! ```
 
-#![doc(html_root_url = "https://keystone/doc/here/v1")]
-
 extern crate keystone_sys as ffi;
 extern crate libc;
 
-use std::ffi::CString;
-use std::fmt;
+use std::{
+    convert::TryInto,
+    ffi::{CStr, CString},
+    fmt,
+    ops::Not,
+};
 
 pub use ffi::keystone_const::*;
 pub use ffi::ks_handle;
@@ -36,8 +38,8 @@ pub struct AsmResult {
 
 impl fmt::Display for AsmResult {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for byte in &self.bytes {
-            try!(f.write_fmt(format_args!("{:02x}", byte)));
+        for &byte in &self.bytes {
+            f.write_fmt(format_args!("{:02x}", byte))?;
         }
 
         Ok(())
@@ -61,12 +63,12 @@ pub fn version() -> (u32, u32) {
 
 /// Return tuple `(major, minor)` API version numbers.
 pub fn arch_supported(arch: Arch) -> bool {
-    unsafe { ffi::ks_arch_supported(arch) }
+    unsafe { ffi::ks_arch_supported(arch) != 0 }
 }
 
 pub fn error_msg(error: Error) -> String {
     unsafe {
-        CStr::from_ptr(ffi::ks_strerror(error.bits()))
+        CStr::from_ptr(ffi::ks_strerror(error))
             .to_string_lossy()
             .into_owned()
     }
@@ -83,23 +85,25 @@ impl Keystone {
             return Err(Error::VERSION);
         }
 
-        let mut handle: ks_handle = 0;
+        let mut handle: Option<ks_handle> = None;
 
         let err = unsafe { ffi::ks_open(arch, mode, &mut handle) };
         if err == Error::OK {
-            Ok(Keystone { handle: handle })
+            Ok(Keystone {
+                handle: handle.expect("Got NULL engine from ks_open()")
+            })
         } else {
             Err(err)
         }
     }
 
     /// Report the last error number when some API function fail.
-    pub fn error(&self) -> Result<(), Error> {
+    pub fn error(&self) -> Option<Error> {
         let err = unsafe { ffi::ks_errno(self.handle) };
         if err == Error::OK {
-            Ok(())
+            None
         } else {
-            Err(err)
+            Some(err)
         }
     }
 
@@ -137,6 +141,7 @@ impl Keystone {
         });
 
         if err == Error::OK {
+            debug_assert!(ptr.is_null().not());
             let bytes_slice = unsafe { std::slice::from_raw_parts(ptr, size) };
             let bytes = bytes_slice.to_vec();
 
@@ -145,12 +150,12 @@ impl Keystone {
             };
 
             Ok(AsmResult {
-                size: size as u32,
-                stat_count: stat_count as u32,
+                size: size.try_into().expect("size_t overflowed u32"),
+                stat_count: stat_count.try_into().expect("size_t overflowed u32"),
                 bytes,
             })
         } else {
-            let err = unsafe { ffi::ks_errno(self.handle) };
+            let err = self.error().unwrap_or(err);
             Err(err)
         }
     }
