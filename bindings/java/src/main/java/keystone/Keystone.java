@@ -7,6 +7,7 @@
 
 package keystone;
 
+import com.sun.jna.NativeLoader;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.PointerByReference;
@@ -20,6 +21,10 @@ import keystone.utilities.Version;
  * The Keystone engine.
  */
 public class Keystone implements AutoCloseable {
+
+    static {
+        NativeLoader.loadAppleSilicon();
+    }
 
     /**
      * The pointer to the Keystone native resource.
